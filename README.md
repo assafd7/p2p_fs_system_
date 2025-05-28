@@ -1,63 +1,66 @@
 # P2P File Sharing Application
 
-A secure peer-to-peer file sharing application with user authentication and file encryption.
+A decentralized peer-to-peer file sharing application built with Python and PyQt6.
 
 ## Features
 
-- User authentication with registration
-- Role-based access control (Admin/Regular User)
-- Secure file sharing with encryption
-- Public and private file sharing options
-- User-specific file access permissions
+- User authentication and registration
+- Decentralized P2P file sharing
+- Automatic user discovery on local network
+- File encryption for secure transfers
+- Public and private file sharing
+- Real-time online users list
 - File download tracking
-- Real-time updates
-- Simple file name search
-- Clean and intuitive desktop interface
-
-## Setup Instructions
-
-1. Create a virtual environment:
-```bash
-python -m venv .venv
-```
-
-2. Activate the virtual environment:
-- Windows:
-```bash
-.venv\Scripts\activate
-```
-- Linux/Mac:
-```bash
-source .venv/bin/activate
-```
-
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-4. Run the application:
-```bash
-python main.py
-```
-
-## Project Structure
-
-- `main.py` - Application entry point
-- `database/` - Database management and models
-- `gui/` - User interface components
-- `network/` - P2P networking implementation
-- `security/` - Encryption and security features
-- `utils/` - Utility functions and helpers
-
-## Security Features
-
-- File encryption for secure sharing
-- User authentication
-- Permission-based access control
-- Download tracking
+- Simple and intuitive user interface
 
 ## Requirements
 
 - Python 3.8 or higher
-- Dependencies listed in requirements.txt 
+- PyQt6
+- SQLAlchemy
+- Cryptography
+- python-dotenv
+
+## Installation
+
+1. Clone the repository
+2. Create a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## Project Structure
+
+```
+cursor_p2p/
+├── src/                    # Source code
+│   ├── main.py            # Application entry point
+│   ├── config.py          # Configuration settings
+│   ├── database/          # Database models and operations
+│   ├── network/           # P2P networking code
+│   ├── ui/                # User interface components
+│   └── utils/             # Utility functions
+├── requirements.txt        # Project dependencies
+└── README.md              # This file
+```
+
+## Security
+
+- Files are encrypted during transfer
+- User authentication required for access
+- Private file sharing with specific user permissions
+- Secure P2P communication
+
+## Usage
+
+1. Run the application:
+   ```bash
+   python src/main.py
+   ```
+2. Register a new account or login
+3. Start sharing files with other users on the network 

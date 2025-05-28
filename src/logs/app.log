@@ -1,0 +1,142 @@
+2025-05-28 23:29:20,367 - root - INFO - Starting P2P File Sharing Application
+2025-05-28 23:29:20,429 - root - INFO - Application created: P2P File Sharing v1.0.0
+2025-05-28 23:29:20,430 - root - DEBUG - Initializing database...
+2025-05-28 23:29:20,489 - root - INFO - Database initialized successfully
+2025-05-28 23:29:20,490 - root - DEBUG - Showing login window...
+2025-05-28 23:29:20,494 - ui - DEBUG - Initializing login window
+2025-05-28 23:29:20,510 - ui - DEBUG - Login window initialized successfully
+2025-05-28 23:29:47,099 - ui - DEBUG - Login attempt for user: 1
+2025-05-28 23:32:42,860 - root - INFO - Starting P2P File Sharing Application
+2025-05-28 23:32:42,889 - root - INFO - Application created: P2P File Sharing v1.0.0
+2025-05-28 23:32:42,890 - root - DEBUG - Initializing database...
+2025-05-28 23:32:42,916 - root - INFO - Database initialized successfully
+2025-05-28 23:32:42,916 - root - DEBUG - Creating login window...
+2025-05-28 23:32:42,919 - ui - DEBUG - Initializing login window
+2025-05-28 23:32:42,927 - ui - DEBUG - Login window initialized successfully
+2025-05-28 23:32:42,928 - root - DEBUG - Login window created, about to show it
+2025-05-28 23:32:46,997 - ui - DEBUG - Registration attempt for user: a
+2025-05-28 23:32:47,041 - ui - INFO - Successfully registered new user: a
+2025-05-28 23:32:49,133 - ui - DEBUG - Login attempt for user: a
+2025-05-28 23:32:49,138 - ui - ERROR - Exception during login: Instance <User at 0x13273066d50> is not bound to a Session; attribute refresh operation cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\cursor_p2p\src\ui\login_window.py", line 75, in login
+    if user and user.password_hash == password_hash:
+                ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\cursor_p2p\.venv\Lib\site-packages\sqlalchemy\orm\attributes.py", line 566, in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\cursor_p2p\.venv\Lib\site-packages\sqlalchemy\orm\attributes.py", line 1086, in get
+    value = self._fire_loader_callables(state, key, passive)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\cursor_p2p\.venv\Lib\site-packages\sqlalchemy\orm\attributes.py", line 1116, in _fire_loader_callables
+    return state._load_expired(state, passive)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\cursor_p2p\.venv\Lib\site-packages\sqlalchemy\orm\state.py", line 798, in _load_expired
+    self.manager.expired_attribute_loader(self, toload, passive)
+  File "C:\Users\User\PycharmProjects\cursor_p2p\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 1584, in load_scalar_attributes
+    raise orm_exc.DetachedInstanceError(
+sqlalchemy.orm.exc.DetachedInstanceError: Instance <User at 0x13273066d50> is not bound to a Session; attribute refresh operation cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)
+
+2025-05-28 23:37:00,764 - root - INFO - Starting P2P File Sharing Application
+2025-05-28 23:37:00,791 - root - INFO - Application created: P2P File Sharing v1.0.0
+2025-05-28 23:37:00,791 - root - DEBUG - Initializing database...
+2025-05-28 23:37:00,815 - database - DEBUG - Creating database tables
+2025-05-28 23:37:00,819 - database - INFO - Database tables created successfully
+2025-05-28 23:37:00,820 - root - INFO - Database initialized successfully
+2025-05-28 23:37:00,820 - root - DEBUG - Creating login window...
+2025-05-28 23:37:00,823 - ui - DEBUG - Initializing login window
+2025-05-28 23:37:00,834 - ui - DEBUG - Login window initialized successfully
+2025-05-28 23:37:00,835 - root - DEBUG - Login window created, about to show it
+2025-05-28 23:37:05,042 - ui - DEBUG - Login attempt for user: 1
+2025-05-28 23:37:05,042 - database - DEBUG - Getting user by username: 1
+2025-05-28 23:37:05,066 - database - DEBUG - User found: 1
+2025-05-28 23:37:05,067 - database - DEBUG - Session committed successfully
+2025-05-28 23:37:05,067 - database - DEBUG - Session closed
+2025-05-28 23:37:05,072 - ui - ERROR - Exception during login: Instance <User at 0x1996b838830> is not bound to a Session; attribute refresh operation cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)
+Traceback (most recent call last):
+  File "C:\Users\User\PycharmProjects\cursor_p2p\src\ui\login_window.py", line 75, in login
+    if user and user.password_hash == password_hash:
+                ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\cursor_p2p\.venv\Lib\site-packages\sqlalchemy\orm\attributes.py", line 566, in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\cursor_p2p\.venv\Lib\site-packages\sqlalchemy\orm\attributes.py", line 1086, in get
+    value = self._fire_loader_callables(state, key, passive)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\cursor_p2p\.venv\Lib\site-packages\sqlalchemy\orm\attributes.py", line 1116, in _fire_loader_callables
+    return state._load_expired(state, passive)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\PycharmProjects\cursor_p2p\.venv\Lib\site-packages\sqlalchemy\orm\state.py", line 798, in _load_expired
+    self.manager.expired_attribute_loader(self, toload, passive)
+  File "C:\Users\User\PycharmProjects\cursor_p2p\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 1584, in load_scalar_attributes
+    raise orm_exc.DetachedInstanceError(
+sqlalchemy.orm.exc.DetachedInstanceError: Instance <User at 0x1996b838830> is not bound to a Session; attribute refresh operation cannot proceed (Background on this error at: https://sqlalche.me/e/20/bhk3)
+
+2025-05-28 23:39:09,012 - root - INFO - Starting P2P File Sharing Application
+2025-05-28 23:39:09,038 - root - INFO - Application created: P2P File Sharing v1.0.0
+2025-05-28 23:39:09,039 - root - DEBUG - Initializing database...
+2025-05-28 23:39:09,039 - database - DEBUG - Initializing database with path: C:\Users\User\.p2p_fileshare\p2p_fileshare.db
+2025-05-28 23:39:09,064 - database - DEBUG - Database engine and session factory created
+2025-05-28 23:39:09,064 - database - DEBUG - Creating database tables
+2025-05-28 23:39:09,067 - database - INFO - Database tables created successfully
+2025-05-28 23:39:09,068 - root - INFO - Database initialized successfully
+2025-05-28 23:39:09,068 - root - DEBUG - Creating login window...
+2025-05-28 23:39:09,071 - ui - DEBUG - Initializing login window
+2025-05-28 23:39:09,079 - ui - DEBUG - Login window initialized successfully
+2025-05-28 23:39:09,080 - root - DEBUG - Login window created, about to show it
+2025-05-28 23:39:13,640 - ui - DEBUG - Login attempt for user: a
+2025-05-28 23:39:13,640 - database - DEBUG - Getting user by username: a
+2025-05-28 23:39:13,662 - database - DEBUG - User found and loaded: a
+2025-05-28 23:39:13,663 - database - DEBUG - Session committed successfully
+2025-05-28 23:39:13,663 - database - DEBUG - Session closed
+2025-05-28 23:39:13,664 - ui - INFO - Successful login for user: a
+2025-05-28 23:39:13,664 - ui - DEBUG - About to accept login window
+2025-05-28 23:39:13,697 - ui - DEBUG - Login window accepted
+2025-05-28 23:39:13,699 - root - DEBUG - Login window result: 1
+2025-05-28 23:39:13,701 - ui - DEBUG - Getting current user: a
+2025-05-28 23:39:13,703 - root - INFO - User logged in: a
+2025-05-28 23:39:13,704 - root - DEBUG - Initializing P2P network...
+2025-05-28 23:39:13,705 - root - DEBUG - P2P network object created
+2025-05-28 23:39:13,724 - root - DEBUG - P2P network started
+2025-05-28 23:39:13,726 - root - DEBUG - Presence broadcasted
+2025-05-28 23:39:13,727 - root - INFO - P2P network initialized successfully
+2025-05-28 23:39:13,727 - root - DEBUG - Creating main window...
+2025-05-28 23:39:13,728 - ui - DEBUG - Starting MainWindow initialization
+2025-05-28 23:39:13,732 - ui - DEBUG - Super().__init__() completed
+2025-05-28 23:39:13,733 - ui - DEBUG - Basic properties set for user: a
+2025-05-28 23:39:13,733 - ui - DEBUG - Encryption initialized
+2025-05-28 23:39:13,733 - ui - DEBUG - Files dictionary initialized
+2025-05-28 23:39:13,734 - ui - DEBUG - Window properties set
+2025-05-28 23:39:13,736 - ui - DEBUG - Central widget and layout created
+2025-05-28 23:39:13,736 - ui - DEBUG - Top bar created
+2025-05-28 23:39:13,760 - ui - DEBUG - File list created
+2025-05-28 23:39:13,761 - ui - DEBUG - Search bar created
+2025-05-28 23:39:13,764 - ui - DEBUG - Buttons created
+2025-05-28 23:39:13,769 - ui - DEBUG - Sharing options created
+2025-05-28 23:39:13,770 - ui - DEBUG - Update timer created and started
+2025-05-28 23:39:13,771 - database - DEBUG - Getting user by username: a
+2025-05-28 23:39:13,773 - database - DEBUG - User found and loaded: a
+2025-05-28 23:39:13,774 - database - DEBUG - Session committed successfully
+2025-05-28 23:39:13,774 - database - DEBUG - Session closed
+2025-05-28 23:39:13,787 - ui - DEBUG - Initial updates completed
+2025-05-28 23:39:13,787 - ui - INFO - MainWindow initialization completed successfully
+2025-05-28 23:39:13,787 - root - DEBUG - Main window object created
+2025-05-28 23:39:13,788 - root - DEBUG - Main window resized
+2025-05-28 23:39:13,871 - root - INFO - Main window displayed successfully
+2025-05-28 23:39:13,872 - root - INFO - Starting application event loop
+2025-05-28 23:39:31,882 - database - DEBUG - Getting user by username: a
+2025-05-28 23:39:31,884 - database - DEBUG - User found and loaded: a
+2025-05-28 23:39:31,885 - database - DEBUG - Session committed successfully
+2025-05-28 23:39:31,885 - database - DEBUG - Session closed
+2025-05-28 23:39:31,885 - database - DEBUG - Adding new file: aa.docx
+2025-05-28 23:39:31,891 - database - INFO - File added successfully: aa.docx
+2025-05-28 23:39:31,906 - database - DEBUG - Session committed successfully
+2025-05-28 23:39:31,907 - database - DEBUG - Session closed
+2025-05-28 23:39:31,908 - database - DEBUG - Getting user by username: a
+2025-05-28 23:39:31,910 - database - DEBUG - User found and loaded: a
+2025-05-28 23:39:31,911 - database - DEBUG - Session committed successfully
+2025-05-28 23:39:31,912 - database - DEBUG - Session closed
+2025-05-28 23:39:31,913 - database - DEBUG - Getting user by username: a
+2025-05-28 23:39:31,914 - database - DEBUG - User found and loaded: a
+2025-05-28 23:39:31,915 - database - DEBUG - Session committed successfully
+2025-05-28 23:39:31,915 - database - DEBUG - Session closed
