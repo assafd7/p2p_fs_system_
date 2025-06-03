@@ -1,3 +1,3 @@
 """
-UI package for P2P File Sharing Application
+UI components for the P2P File Sharing Application
 """ 

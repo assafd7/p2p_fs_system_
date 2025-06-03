@@ -1,66 +1,94 @@
 # P2P File Sharing Application
 
-A decentralized peer-to-peer file sharing application built with Python and PyQt6.
+A peer-to-peer file sharing application built with Python and Tkinter.
 
-## Features
+## Current Features
 
-- User authentication and registration
-- Decentralized P2P file sharing
-- Automatic user discovery on local network
-- File encryption for secure transfers
-- Public and private file sharing
-- Real-time online users list
-- File download tracking
-- Simple and intuitive user interface
-
-## Requirements
-
-- Python 3.8 or higher
-- PyQt6
-- SQLAlchemy
-- Cryptography
-- python-dotenv
-
-## Installation
-
-1. Clone the repository
-2. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+- User registration and login
+- Local file storage
+- File upload and display
+- Basic file metadata management
 
 ## Project Structure
 
 ```
-cursor_p2p/
-├── src/                    # Source code
-│   ├── main.py            # Application entry point
-│   ├── config.py          # Configuration settings
-│   ├── database/          # Database models and operations
-│   ├── network/           # P2P networking code
-│   ├── ui/                # User interface components
-│   └── utils/             # Utility functions
-├── requirements.txt        # Project dependencies
-└── README.md              # This file
+src/
+├── database/         # Local storage implementation
+├── ui/              # User interface components
+│   ├── login_window.py
+│   └── main_window.py
+└── main.py          # Application entry point
 ```
 
-## Security
+## Setup
 
-- Files are encrypted during transfer
-- User authentication required for access
-- Private file sharing with specific user permissions
-- Secure P2P communication
+1. Create a virtual environment:
+```bash
+python -m venv .venv
+```
 
-## Usage
+2. Activate the virtual environment:
+- Windows:
+```bash
+.venv\Scripts\activate
+```
+- Unix/MacOS:
+```bash
+source .venv/bin/activate
+```
 
-1. Run the application:
-   ```bash
-   python src/main.py
-   ```
-2. Register a new account or login
-3. Start sharing files with other users on the network 
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+4. Run the application:
+```bash
+python src/main.py
+```
+
+## Development Status
+
+### Phase 1: Basic UI and Local Storage ✅
+- [x] User authentication
+- [x] File upload
+- [x] File list display
+- [x] Local storage implementation
+
+### Phase 2: P2P Network Implementation (Next)
+- [ ] DHT implementation
+- [ ] Peer discovery
+- [ ] P2P communication protocol
+- [ ] Network status indicators
+
+### Phase 3: File Transfer Protocol
+- [ ] File chunking and reassembly
+- [ ] Download progress tracking
+- [ ] Parallel downloads
+- [ ] File integrity verification
+
+### Phase 4: Security & Privacy
+- [ ] File encryption
+- [ ] User authentication tokens
+- [ ] File access control
+- [ ] Secure P2P communication
+
+### Phase 5: Advanced Features
+- [ ] File search
+- [ ] File versioning
+- [ ] File sharing links
+- [ ] Bandwidth control
+- [ ] File preview
+- [ ] Peer chat
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details. 
