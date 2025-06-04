@@ -124,15 +124,28 @@ class Peer:
     def _read_message(self, sock: socket.socket) -> Optional[Message]:
         """Read a complete message from the socket"""
         buffer = b''
+        start_time = time.time()
+        
         while True:
             try:
+                # Check if we've exceeded the timeout
+                if time.time() - start_time > 5:
+                    logger.error("Timeout while reading message")
+                    return None
+                    
                 data = sock.recv(4096)
                 if not data:
                     return None
+                    
                 buffer += data
                 if b'\n' in buffer:
                     message_data, buffer = buffer.split(b'\n', 1)
-                    return self.protocol.deserialize_message(message_data)
+                    try:
+                        return self.protocol.deserialize_message(message_data)
+                    except Exception as e:
+                        logger.error(f"Error deserializing message: {str(e)}")
+                        return None
+                        
             except socket.timeout:
                 continue
             except Exception as e:
@@ -211,6 +224,8 @@ class Peer:
             start_time = time.time()
             while time.time() - start_time < 5:  # 5 second timeout
                 try:
+                    # Set a shorter timeout for each recv attempt
+                    sock.settimeout(1)
                     message = self._read_message(sock)
                     if message:
                         logger.info(f"Received response type: {message.type}")
@@ -242,6 +257,10 @@ class Peer:
                             logger.error(f"Unexpected response type: {message.type}")
                             return False
                 except socket.timeout:
+                    # Check if we've exceeded the total timeout
+                    if time.time() - start_time >= 5:
+                        logger.error("Connection timeout waiting for response")
+                        return False
                     continue
                 except Exception as e:
                     logger.error(f"Error receiving response: {str(e)}")
@@ -259,6 +278,12 @@ class Peer:
         except Exception as e:
             logger.error(f"Failed to connect to peer {host}:{port}: {str(e)}")
             return False
+        finally:
+            # Ensure socket is closed if connection fails
+            try:
+                sock.close()
+            except:
+                pass
     
     def disconnect(self, peer_id: str) -> bool:
         """
