@@ -8,6 +8,7 @@ import logging
 import socket
 import threading
 import hashlib
+import time
 from typing import Dict, List, Optional, Tuple, Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -73,6 +74,7 @@ class Peer:
         try:
             # Create and bind socket
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self._socket.bind((self.host, self.port))
             self._socket.listen(5)
             
@@ -122,6 +124,10 @@ class Peer:
     def _handle_connection(self, client_socket: socket.socket, address: Tuple[str, int]):
         """Handle an incoming connection"""
         try:
+            # Set socket options
+            client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            
             # Send hello message
             hello_msg = self.protocol.create_hello_message()
             client_socket.send(self.protocol.serialize_message(hello_msg))
@@ -173,6 +179,8 @@ class Peer:
         try:
             # Create connection with timeout
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             sock.settimeout(5)  # 5 second timeout
             sock.connect((host, port))
             logger.info(f"Socket connected to {host}:{port}")
@@ -183,35 +191,44 @@ class Peer:
             logger.info("Sent hello message")
             
             # Wait for response with timeout
-            data = sock.recv(4096)
-            if not data:
-                logger.error("No response received")
-                return False
+            start_time = time.time()
+            while time.time() - start_time < 5:  # 5 second timeout
+                try:
+                    data = sock.recv(4096)
+                    if data:
+                        response = self.protocol.deserialize_message(data)
+                        logger.info(f"Received response type: {response.type}")
+                        
+                        if response.type == Protocol.MSG_HELLO:
+                            # Update peer info
+                            self.peers[peer_id] = PeerInfo(
+                                id=peer_id,
+                                address=(host, port),
+                                last_seen=datetime.now(),
+                                status='online'
+                            )
+                            
+                            # Start connection handler
+                            threading.Thread(
+                                target=self._handle_connection,
+                                args=(sock, (host, port)),
+                                daemon=True
+                            ).start()
+                            
+                            logger.info(f"Connected to peer {peer_id} at {host}:{port}")
+                            return True
+                        else:
+                            logger.error(f"Unexpected response type: {response.type}")
+                            return False
+                except socket.timeout:
+                    continue
+                except Exception as e:
+                    logger.error(f"Error receiving response: {str(e)}")
+                    return False
             
-            response = self.protocol.deserialize_message(data)
-            logger.info(f"Received response type: {response.type}")
+            logger.error("Connection timeout waiting for response")
+            return False
             
-            if response.type != Protocol.MSG_HELLO:
-                logger.error(f"Unexpected response type: {response.type}")
-                return False
-            
-            # Update peer info
-            self.peers[peer_id] = PeerInfo(
-                id=peer_id,
-                address=(host, port),
-                last_seen=datetime.now(),
-                status='online'
-            )
-            
-            # Start connection handler
-            threading.Thread(
-                target=self._handle_connection,
-                args=(sock, (host, port)),
-                daemon=True
-            ).start()
-            
-            logger.info(f"Connected to peer {peer_id} at {host}:{port}")
-            return True
         except socket.timeout:
             logger.error(f"Connection timeout to {host}:{port}")
             return False
