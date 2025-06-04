@@ -200,6 +200,11 @@ class Peer:
                         logger.info(f"Received response type: {response.type}")
                         
                         if response.type == Protocol.MSG_HELLO:
+                            # Send our hello response
+                            our_hello = self.protocol.create_hello_message()
+                            sock.send(self.protocol.serialize_message(our_hello))
+                            logger.info("Sent our hello response")
+                            
                             # Update peer info
                             self.peers[peer_id] = PeerInfo(
                                 id=peer_id,
