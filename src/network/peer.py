@@ -109,14 +109,15 @@ class Peer:
         while self.connected:
             try:
                 client_socket, address = self._socket.accept()
+                logger.info(f"New connection from {address}")
                 threading.Thread(
                     target=self._handle_connection,
                     args=(client_socket, address),
                     daemon=True
                 ).start()
-            except:
+            except Exception as e:
                 if self.connected:
-                    logger.error("Error accepting connection")
+                    logger.error(f"Error accepting connection: {str(e)}")
     
     def _handle_connection(self, client_socket: socket.socket, address: Tuple[str, int]):
         """Handle an incoming connection"""
@@ -124,23 +125,32 @@ class Peer:
             # Send hello message
             hello_msg = self.protocol.create_hello_message()
             client_socket.send(self.protocol.serialize_message(hello_msg))
+            logger.info(f"Sent hello message to {address}")
             
             # Handle messages
             while self.connected:
                 try:
                     data = client_socket.recv(4096)
                     if not data:
+                        logger.info(f"Connection closed by {address}")
                         break
                     
                     message = self.protocol.deserialize_message(data)
+                    logger.info(f"Received message type {message.type} from {address}")
+                    
                     response = self.protocol.handle_message(message)
                     
                     if response:
                         client_socket.send(self.protocol.serialize_message(response))
-                except:
+                        logger.info(f"Sent response to {address}")
+                except Exception as e:
+                    logger.error(f"Error handling message from {address}: {str(e)}")
                     break
+        except Exception as e:
+            logger.error(f"Error in connection handler for {address}: {str(e)}")
         finally:
             client_socket.close()
+            logger.info(f"Connection closed with {address}")
     
     def connect(self, host: str, port: int) -> bool:
         """
@@ -154,26 +164,35 @@ class Peer:
             bool: True if connection was successful
         """
         if not self.connected:
+            logger.error("Cannot connect: peer is not started")
             return False
         
         peer_id = self._generate_peer_id(host, port)
+        logger.info(f"Attempting to connect to {host}:{port}")
         
         try:
-            # Create connection
+            # Create connection with timeout
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)  # 5 second timeout
             sock.connect((host, port))
+            logger.info(f"Socket connected to {host}:{port}")
             
             # Send hello message
             hello_msg = self.protocol.create_hello_message()
             sock.send(self.protocol.serialize_message(hello_msg))
+            logger.info("Sent hello message")
             
-            # Wait for response
+            # Wait for response with timeout
             data = sock.recv(4096)
             if not data:
+                logger.error("No response received")
                 return False
             
             response = self.protocol.deserialize_message(data)
+            logger.info(f"Received response type: {response.type}")
+            
             if response.type != Protocol.MSG_HELLO:
+                logger.error(f"Unexpected response type: {response.type}")
                 return False
             
             # Update peer info
@@ -193,6 +212,12 @@ class Peer:
             
             logger.info(f"Connected to peer {peer_id} at {host}:{port}")
             return True
+        except socket.timeout:
+            logger.error(f"Connection timeout to {host}:{port}")
+            return False
+        except ConnectionRefusedError:
+            logger.error(f"Connection refused by {host}:{port}")
+            return False
         except Exception as e:
             logger.error(f"Failed to connect to peer {host}:{port}: {str(e)}")
             return False
