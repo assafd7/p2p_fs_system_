@@ -77,7 +77,7 @@ class Protocol:
             "timestamp": message.timestamp.isoformat(),
             "sender_id": message.sender_id
         }
-        return json.dumps(data).encode()
+        return json.dumps(data).encode() + b'\n'  # Add newline as message delimiter
     
     def deserialize_message(self, data: bytes) -> Message:
         """
@@ -89,13 +89,20 @@ class Protocol:
         Returns:
             Message: Deserialized message
         """
-        data_dict = json.loads(data.decode())
-        return Message(
-            type=data_dict["type"],
-            data=data_dict["data"],
-            timestamp=datetime.fromisoformat(data_dict["timestamp"]),
-            sender_id=data_dict["sender_id"]
-        )
+        try:
+            # Remove newline if present
+            if data.endswith(b'\n'):
+                data = data[:-1]
+            data_dict = json.loads(data.decode())
+            return Message(
+                type=data_dict["type"],
+                data=data_dict["data"],
+                timestamp=datetime.fromisoformat(data_dict["timestamp"]),
+                sender_id=data_dict["sender_id"]
+            )
+        except Exception as e:
+            logger.error(f"Error deserializing message: {str(e)}")
+            raise
     
     def register_handler(self, msg_type: str, handler: callable):
         """
@@ -117,8 +124,12 @@ class Protocol:
         Returns:
             Optional[Message]: Response message if any
         """
+        logger.info(f"Handling message type: {message.type}")
         if message.type in self.message_handlers:
-            return self.message_handlers[message.type](message)
+            response = self.message_handlers[message.type](message)
+            if response:
+                logger.info(f"Created response message type: {response.type}")
+            return response
         else:
             logger.warning(f"No handler for message type: {message.type}")
             return None

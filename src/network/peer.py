@@ -121,6 +121,24 @@ class Peer:
                 if self.connected:
                     logger.error(f"Error accepting connection: {str(e)}")
     
+    def _read_message(self, sock: socket.socket) -> Optional[Message]:
+        """Read a complete message from the socket"""
+        buffer = b''
+        while True:
+            try:
+                data = sock.recv(4096)
+                if not data:
+                    return None
+                buffer += data
+                if b'\n' in buffer:
+                    message_data, buffer = buffer.split(b'\n', 1)
+                    return self.protocol.deserialize_message(message_data)
+            except socket.timeout:
+                continue
+            except Exception as e:
+                logger.error(f"Error reading message: {str(e)}")
+                return None
+    
     def _handle_connection(self, client_socket: socket.socket, address: Tuple[str, int]):
         """Handle an incoming connection"""
         try:
@@ -136,12 +154,11 @@ class Peer:
             # Handle messages
             while self.connected:
                 try:
-                    data = client_socket.recv(4096)
-                    if not data:
+                    message = self._read_message(client_socket)
+                    if not message:
                         logger.info(f"Connection closed by {address}")
                         break
                     
-                    message = self.protocol.deserialize_message(data)
                     logger.info(f"Received message type {message.type} from {address}")
                     
                     response = self.protocol.handle_message(message)
@@ -194,12 +211,11 @@ class Peer:
             start_time = time.time()
             while time.time() - start_time < 5:  # 5 second timeout
                 try:
-                    data = sock.recv(4096)
-                    if data:
-                        response = self.protocol.deserialize_message(data)
-                        logger.info(f"Received response type: {response.type}")
+                    message = self._read_message(sock)
+                    if message:
+                        logger.info(f"Received response type: {message.type}")
                         
-                        if response.type == Protocol.MSG_HELLO:
+                        if message.type == Protocol.MSG_HELLO:
                             # Send our hello response
                             our_hello = self.protocol.create_hello_message()
                             sock.send(self.protocol.serialize_message(our_hello))
@@ -223,7 +239,7 @@ class Peer:
                             logger.info(f"Connected to peer {peer_id} at {host}:{port}")
                             return True
                         else:
-                            logger.error(f"Unexpected response type: {response.type}")
+                            logger.error(f"Unexpected response type: {message.type}")
                             return False
                 except socket.timeout:
                     continue
