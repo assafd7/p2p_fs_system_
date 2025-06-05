@@ -9,6 +9,7 @@ import socket
 import threading
 import hashlib
 import time
+import json
 from typing import Dict, List, Optional, Tuple, Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -125,32 +126,64 @@ class Peer:
         """Read a complete message from the socket"""
         buffer = b''
         start_time = time.time()
+        MAX_MESSAGE_SIZE = 1024 * 1024  # 1MB max message size
+        RECV_TIMEOUT = 1.0  # 1 second timeout for each recv
         
-        while True:
-            try:
-                # Check if we've exceeded the timeout
+        try:
+            # Set socket timeout for recv operations
+            sock.settimeout(RECV_TIMEOUT)
+            
+            while True:
+                # Check if we've exceeded the total timeout
                 if time.time() - start_time > 5:
                     logger.error("Timeout while reading message")
                     return None
+                
+                # Check if message is too large
+                if len(buffer) > MAX_MESSAGE_SIZE:
+                    logger.error("Message exceeds maximum size limit")
+                    return None
+                
+                try:
+                    data = sock.recv(4096)
+                    if not data:
+                        if buffer:  # We have partial data but connection closed
+                            logger.error("Connection closed while reading message")
+                        return None
                     
-                data = sock.recv(4096)
-                if not data:
+                    buffer += data
+                    
+                    # Try to find complete message
+                    if b'\n' in buffer:
+                        message_data, buffer = buffer.split(b'\n', 1)
+                        try:
+                            return self.protocol.deserialize_message(message_data)
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Invalid JSON in message: {str(e)}")
+                            return None
+                        except Exception as e:
+                            logger.error(f"Error deserializing message: {str(e)}")
+                            return None
+                            
+                except socket.timeout:
+                    # This is expected, just continue
+                    continue
+                except ConnectionResetError:
+                    logger.error("Connection reset by peer")
+                    return None
+                except Exception as e:
+                    logger.error(f"Error reading from socket: {str(e)}")
                     return None
                     
-                buffer += data
-                if b'\n' in buffer:
-                    message_data, buffer = buffer.split(b'\n', 1)
-                    try:
-                        return self.protocol.deserialize_message(message_data)
-                    except Exception as e:
-                        logger.error(f"Error deserializing message: {str(e)}")
-                        return None
-                        
-            except socket.timeout:
-                continue
-            except Exception as e:
-                logger.error(f"Error reading message: {str(e)}")
-                return None
+        except Exception as e:
+            logger.error(f"Unexpected error in _read_message: {str(e)}")
+            return None
+        finally:
+            # Reset socket timeout to default
+            try:
+                sock.settimeout(None)
+            except:
+                pass
     
     def _handle_connection(self, client_socket: socket.socket, address: Tuple[str, int]):
         """Handle an incoming connection"""
