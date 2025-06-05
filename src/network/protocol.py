@@ -63,13 +63,13 @@ class Protocol:
     
     def serialize_message(self, message: Message) -> bytes:
         """
-        Serialize a message to bytes
+        Serialize a message to bytes with length prefix
         
         Args:
             message: Message to serialize
             
         Returns:
-            bytes: Serialized message
+            bytes: Serialized message with length prefix
         """
         data = {
             "type": message.type,
@@ -77,7 +77,9 @@ class Protocol:
             "timestamp": message.timestamp.isoformat(),
             "sender_id": message.sender_id
         }
-        return json.dumps(data).encode() + b'\n'  # Add newline as message delimiter
+        message_bytes = json.dumps(data).encode()
+        length_bytes = len(message_bytes).to_bytes(4, 'big')
+        return length_bytes + message_bytes
     
     def deserialize_message(self, data: bytes) -> Message:
         """
@@ -90,9 +92,6 @@ class Protocol:
             Message: Deserialized message
         """
         try:
-            # Remove newline if present
-            if data.endswith(b'\n'):
-                data = data[:-1]
             data_dict = json.loads(data.decode())
             return Message(
                 type=data_dict["type"],

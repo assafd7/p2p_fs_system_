@@ -40,20 +40,13 @@ class Peer:
         self.host = host
         self.port = port
         self.id = self._generate_peer_id(host, port)
-        self.peers: Dict[str, PeerInfo] = {}  # peer_id -> PeerInfo
-        self.connected = False
-        self._socket: Optional[socket.socket] = None
-        self._listener_thread: Optional[threading.Thread] = None
-        self._message_handlers: Dict[str, Callable] = {}
-        
-        # Initialize protocol
         self.protocol = Protocol(self.id)
-        self._setup_protocol_handlers()
+        self.peers: Dict[str, PeerInfo] = {}
+        self.connected = False
+        self._socket = None
+        self._listener_thread = None
         
-        logger.info(f"Initialized peer {self.id} at {host}:{port}")
-    
-    def _setup_protocol_handlers(self):
-        """Set up protocol message handlers"""
+        # Register message handlers
         self.protocol.register_handler(Protocol.MSG_HELLO, self._handle_hello)
         self.protocol.register_handler(Protocol.MSG_PEER_LIST, self._handle_peer_list)
         self.protocol.register_handler(Protocol.MSG_FILE_LIST, self._handle_file_list)
@@ -62,6 +55,8 @@ class Peer:
         self.protocol.register_handler(Protocol.MSG_PING, self._handle_ping)
         self.protocol.register_handler(Protocol.MSG_PONG, self._handle_pong)
         self.protocol.register_handler(Protocol.MSG_GOODBYE, self._handle_goodbye)
+        
+        logger.info(f"Initialized peer {self.id} at {host}:{port}")
     
     def _generate_peer_id(self, host: str, port: int) -> str:
         """Generate a unique peer ID"""
@@ -122,201 +117,153 @@ class Peer:
                 if self.connected:
                     logger.error(f"Error accepting connection: {str(e)}")
     
+    def _send_message(self, sock: socket.socket, message: Message) -> bool:
+        """Send a message through the socket"""
+        try:
+            data = self.protocol.serialize_message(message)
+            sock.sendall(data)
+            return True
+        except Exception as e:
+            logger.error(f"Error sending message: {str(e)}")
+            return False
+    
     def _read_message(self, sock: socket.socket) -> Optional[Message]:
         """Read a complete message from the socket"""
-        buffer = b''
-        start_time = time.time()
-        MAX_MESSAGE_SIZE = 1024 * 1024  # 1MB max message size
-        RECV_TIMEOUT = 1.0  # 1 second timeout for each recv
-        
         try:
-            # Set socket timeout for recv operations
-            sock.settimeout(RECV_TIMEOUT)
+            # Set a short timeout for reading
+            sock.settimeout(2.0)
             
-            while True:
-                # Check if we've exceeded the total timeout
-                if time.time() - start_time > 5:
-                    logger.error("Timeout while reading message")
-                    return None
+            # Read the message length (first 4 bytes)
+            length_data = sock.recv(4)
+            if len(length_data) != 4:
+                return None
                 
-                # Check if message is too large
-                if len(buffer) > MAX_MESSAGE_SIZE:
-                    logger.error("Message exceeds maximum size limit")
+            message_length = int.from_bytes(length_data, 'big')
+            if message_length <= 0 or message_length > 1024 * 1024:  # Max 1MB
+                logger.error(f"Invalid message length: {message_length}")
+                return None
+            
+            # Read the message data
+            message_data = b''
+            while len(message_data) < message_length:
+                chunk = sock.recv(min(4096, message_length - len(message_data)))
+                if not chunk:
                     return None
-                
-                try:
-                    data = sock.recv(4096)
-                    if not data:
-                        if buffer:  # We have partial data but connection closed
-                            logger.error("Connection closed while reading message")
-                        return None
-                    
-                    buffer += data
-                    
-                    # Try to find complete message
-                    if b'\n' in buffer:
-                        message_data, buffer = buffer.split(b'\n', 1)
-                        try:
-                            return self.protocol.deserialize_message(message_data)
-                        except json.JSONDecodeError as e:
-                            logger.error(f"Invalid JSON in message: {str(e)}")
-                            return None
-                        except Exception as e:
-                            logger.error(f"Error deserializing message: {str(e)}")
-                            return None
-                            
-                except socket.timeout:
-                    # This is expected, just continue
-                    continue
-                except ConnectionResetError:
-                    logger.error("Connection reset by peer")
-                    return None
-                except Exception as e:
-                    logger.error(f"Error reading from socket: {str(e)}")
-                    return None
-                    
+                message_data += chunk
+            
+            # Parse the message
+            return self.protocol.deserialize_message(message_data)
+            
+        except socket.timeout:
+            logger.error("Timeout while reading message")
+            return None
         except Exception as e:
-            logger.error(f"Unexpected error in _read_message: {str(e)}")
+            logger.error(f"Error reading message: {str(e)}")
             return None
         finally:
-            # Reset socket timeout to default
-            try:
-                sock.settimeout(None)
-            except:
-                pass
+            sock.settimeout(None)
     
     def _handle_connection(self, client_socket: socket.socket, address: Tuple[str, int]):
         """Handle an incoming connection"""
         try:
-            # Set socket options
-            client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-            client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            
             # Send hello message
             hello_msg = self.protocol.create_hello_message()
-            client_socket.send(self.protocol.serialize_message(hello_msg))
-            logger.info(f"Sent hello message to {address}")
+            if not self._send_message(client_socket, hello_msg):
+                return
+            
+            # Wait for hello response
+            response = self._read_message(client_socket)
+            if not response or response.type != Protocol.MSG_HELLO:
+                logger.error(f"Invalid hello response from {address}")
+                return
+            
+            # Connection established
+            peer_id = response.sender_id
+            self.peers[peer_id] = PeerInfo(
+                id=peer_id,
+                address=address,
+                last_seen=datetime.now(),
+                status='online'
+            )
+            logger.info(f"Connection established with peer {peer_id}")
             
             # Handle messages
             while self.connected:
-                try:
-                    message = self._read_message(client_socket)
-                    if not message:
-                        logger.info(f"Connection closed by {address}")
-                        break
-                    
-                    logger.info(f"Received message type {message.type} from {address}")
-                    
-                    response = self.protocol.handle_message(message)
-                    
-                    if response:
-                        client_socket.send(self.protocol.serialize_message(response))
-                        logger.info(f"Sent response to {address}")
-                except Exception as e:
-                    logger.error(f"Error handling message from {address}: {str(e)}")
+                message = self._read_message(client_socket)
+                if not message:
                     break
+                
+                response = self.protocol.handle_message(message)
+                if response:
+                    self._send_message(client_socket, response)
+                    
         except Exception as e:
-            logger.error(f"Error in connection handler for {address}: {str(e)}")
+            logger.error(f"Error in connection handler: {str(e)}")
         finally:
             client_socket.close()
+            if peer_id in self.peers:
+                self.peers[peer_id].status = 'offline'
             logger.info(f"Connection closed with {address}")
     
     def connect(self, host: str, port: int) -> bool:
-        """
-        Connect to another peer
-        
-        Args:
-            host: Host address to connect to
-            port: Port to connect to
-            
-        Returns:
-            bool: True if connection was successful
-        """
+        """Connect to another peer"""
         if not self.connected:
             logger.error("Cannot connect: peer is not started")
             return False
         
-        peer_id = self._generate_peer_id(host, port)
-        logger.info(f"Attempting to connect to {host}:{port}")
+        logger.info(f"Connecting to {host}:{port}")
         
         try:
-            # Create connection with timeout
+            # Create connection
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            sock.settimeout(5)  # 5 second timeout
+            sock.settimeout(5.0)
             sock.connect((host, port))
-            logger.info(f"Socket connected to {host}:{port}")
             
             # Send hello message
             hello_msg = self.protocol.create_hello_message()
-            sock.send(self.protocol.serialize_message(hello_msg))
-            logger.info("Sent hello message")
+            if not self._send_message(sock, hello_msg):
+                return False
             
-            # Wait for response with timeout
-            start_time = time.time()
-            while time.time() - start_time < 5:  # 5 second timeout
-                try:
-                    # Set a shorter timeout for each recv attempt
-                    sock.settimeout(1)
-                    message = self._read_message(sock)
-                    if message:
-                        logger.info(f"Received response type: {message.type}")
-                        
-                        if message.type == Protocol.MSG_HELLO:
-                            # Send our hello response
-                            our_hello = self.protocol.create_hello_message()
-                            sock.send(self.protocol.serialize_message(our_hello))
-                            logger.info("Sent our hello response")
-                            
-                            # Update peer info
-                            self.peers[peer_id] = PeerInfo(
-                                id=peer_id,
-                                address=(host, port),
-                                last_seen=datetime.now(),
-                                status='online'
-                            )
-                            
-                            # Start connection handler
-                            threading.Thread(
-                                target=self._handle_connection,
-                                args=(sock, (host, port)),
-                                daemon=True
-                            ).start()
-                            
-                            logger.info(f"Connected to peer {peer_id} at {host}:{port}")
-                            return True
-                        else:
-                            logger.error(f"Unexpected response type: {message.type}")
-                            return False
-                except socket.timeout:
-                    # Check if we've exceeded the total timeout
-                    if time.time() - start_time >= 5:
-                        logger.error("Connection timeout waiting for response")
-                        return False
-                    continue
-                except Exception as e:
-                    logger.error(f"Error receiving response: {str(e)}")
-                    return False
+            # Wait for hello response
+            response = self._read_message(sock)
+            if not response or response.type != Protocol.MSG_HELLO:
+                logger.error("Invalid hello response")
+                return False
             
-            logger.error("Connection timeout waiting for response")
-            return False
+            # Connection established
+            peer_id = response.sender_id
+            self.peers[peer_id] = PeerInfo(
+                id=peer_id,
+                address=(host, port),
+                last_seen=datetime.now(),
+                status='online'
+            )
+            
+            # Start connection handler
+            threading.Thread(
+                target=self._handle_connection,
+                args=(sock, (host, port)),
+                daemon=True
+            ).start()
+            
+            logger.info(f"Connected to peer {peer_id}")
+            return True
             
         except socket.timeout:
-            logger.error(f"Connection timeout to {host}:{port}")
+            logger.error("Connection timeout")
             return False
         except ConnectionRefusedError:
-            logger.error(f"Connection refused by {host}:{port}")
+            logger.error("Connection refused")
             return False
         except Exception as e:
-            logger.error(f"Failed to connect to peer {host}:{port}: {str(e)}")
+            logger.error(f"Connection failed: {str(e)}")
             return False
         finally:
-            # Ensure socket is closed if connection fails
-            try:
-                sock.close()
-            except:
-                pass
+            if not self.connected:
+                try:
+                    sock.close()
+                except:
+                    pass
     
     def disconnect(self, peer_id: str) -> bool:
         """
