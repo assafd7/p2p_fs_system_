@@ -121,7 +121,8 @@ class Peer:
         """Send a message through the socket"""
         try:
             data = self.protocol.serialize_message(message)
-            logger.debug(f"Sending {len(data)} bytes")
+            logger.info(f"[SEND] Message type: {message.type}, Length: {len(data)} bytes, To: {sock.getpeername()}")
+            logger.debug(f"[SEND] Message content: {message.data}")
             sock.sendall(data)
             return True
         except Exception as e:
@@ -135,14 +136,14 @@ class Peer:
             sock.settimeout(2.0)
             
             # Read the message length (first 4 bytes)
-            logger.debug("Reading message length")
+            logger.debug(f"[RECV] Waiting for message from {sock.getpeername()}")
             length_data = sock.recv(4)
             if len(length_data) != 4:
                 logger.error(f"Invalid length data received: {len(length_data)} bytes")
                 return None
                 
             message_length = int.from_bytes(length_data, 'big')
-            logger.debug(f"Message length: {message_length} bytes")
+            logger.debug(f"[RECV] Message length: {message_length} bytes")
             if message_length <= 0 or message_length > 1024 * 1024:  # Max 1MB
                 logger.error(f"Invalid message length: {message_length}")
                 return None
@@ -155,11 +156,14 @@ class Peer:
                     logger.error("Connection closed while reading message")
                     return None
                 message_data += chunk
-                logger.debug(f"Read {len(message_data)}/{message_length} bytes")
+                logger.debug(f"[RECV] Read {len(message_data)}/{message_length} bytes")
             
             # Parse the message
-            logger.debug("Parsing message")
-            return self.protocol.deserialize_message(message_data)
+            logger.debug("[RECV] Parsing message")
+            message = self.protocol.deserialize_message(message_data)
+            logger.info(f"[RECV] Received message type: {message.type}, From: {sock.getpeername()}")
+            logger.debug(f"[RECV] Message content: {message.data}")
+            return message
             
         except socket.timeout:
             logger.error("Timeout while reading message")
@@ -173,93 +177,93 @@ class Peer:
     def _handle_connection(self, client_socket: socket.socket, address: Tuple[str, int]):
         """Handle an incoming connection"""
         try:
-            logger.info(f"Handling new connection from {address}")
+            logger.info(f"[SERVER] New connection from {address}")
             
             # Send hello message
             hello_msg = self.protocol.create_hello_message()
-            logger.info(f"Sending hello message to {address}")
+            logger.info(f"[SERVER] Sending hello message to {address}")
             if not self._send_message(client_socket, hello_msg):
-                logger.error(f"Failed to send hello message to {address}")
+                logger.error(f"[SERVER] Failed to send hello message to {address}")
                 return
             
             # Wait for hello response
-            logger.info(f"Waiting for hello response from {address}")
+            logger.info(f"[SERVER] Waiting for hello response from {address}")
             response = self._read_message(client_socket)
             if not response:
-                logger.error(f"No response received from {address}")
+                logger.error(f"[SERVER] No response received from {address}")
                 return
             if response.type != Protocol.MSG_HELLO:
-                logger.error(f"Invalid response type {response.type} from {address}")
+                logger.error(f"[SERVER] Invalid response type {response.type} from {address}")
                 return
             
             # Connection established
             peer_id = response.sender_id
-            logger.info(f"Received hello from peer {peer_id}")
+            logger.info(f"[SERVER] Received hello from peer {peer_id}")
             self.peers[peer_id] = PeerInfo(
                 id=peer_id,
                 address=address,
                 last_seen=datetime.now(),
                 status='online'
             )
-            logger.info(f"Connection established with peer {peer_id}")
+            logger.info(f"[SERVER] Connection established with peer {peer_id}")
             
             # Handle messages
             while self.connected:
                 message = self._read_message(client_socket)
                 if not message:
-                    logger.info(f"Connection closed by {address}")
+                    logger.info(f"[SERVER] Connection closed by {address}")
                     break
                 
-                logger.info(f"Received message type {message.type} from {address}")
+                logger.info(f"[SERVER] Received message type {message.type} from {address}")
                 response = self.protocol.handle_message(message)
                 if response:
-                    logger.info(f"Sending response type {response.type} to {address}")
+                    logger.info(f"[SERVER] Sending response type {response.type} to {address}")
                     self._send_message(client_socket, response)
                     
         except Exception as e:
-            logger.error(f"Error in connection handler: {str(e)}")
+            logger.error(f"[SERVER] Error in connection handler: {str(e)}")
         finally:
             client_socket.close()
             if peer_id in self.peers:
                 self.peers[peer_id].status = 'offline'
-            logger.info(f"Connection closed with {address}")
+            logger.info(f"[SERVER] Connection closed with {address}")
     
     def connect(self, host: str, port: int) -> bool:
         """Connect to another peer"""
         if not self.connected:
-            logger.error("Cannot connect: peer is not started")
+            logger.error("[CLIENT] Cannot connect: peer is not started")
             return False
         
-        logger.info(f"Connecting to {host}:{port}")
+        logger.info(f"[CLIENT] Connecting to {host}:{port}")
         
         try:
             # Create connection
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(5.0)
-            logger.info(f"Attempting to connect socket to {host}:{port}")
+            logger.info(f"[CLIENT] Attempting to connect socket to {host}:{port}")
             sock.connect((host, port))
-            logger.info("Socket connected successfully")
+            logger.info("[CLIENT] Socket connected successfully")
             
             # Send hello message
             hello_msg = self.protocol.create_hello_message()
-            logger.info("Sending hello message")
+            logger.info("[CLIENT] Sending hello message")
             if not self._send_message(sock, hello_msg):
-                logger.error("Failed to send hello message")
+                logger.error("[CLIENT] Failed to send hello message")
                 return False
             
             # Wait for hello response
-            logger.info("Waiting for hello response")
+            logger.info("[CLIENT] Waiting for hello response")
             response = self._read_message(sock)
             if not response:
-                logger.error("No response received")
+                logger.error("[CLIENT] No response received")
                 return False
             if response.type != Protocol.MSG_HELLO:
-                logger.error(f"Invalid response type: {response.type}")
+                logger.error(f"[CLIENT] Invalid response type: {response.type}")
                 return False
             
             # Connection established
             peer_id = response.sender_id
-            logger.info(f"Received hello from peer {peer_id}")
+            logger.info(f"[CLIENT] Received hello from peer {peer_id}")
             self.peers[peer_id] = PeerInfo(
                 id=peer_id,
                 address=(host, port),
@@ -274,17 +278,17 @@ class Peer:
                 daemon=True
             ).start()
             
-            logger.info(f"Connected to peer {peer_id}")
+            logger.info(f"[CLIENT] Connected to peer {peer_id}")
             return True
             
         except socket.timeout:
-            logger.error("Connection timeout")
+            logger.error("[CLIENT] Connection timeout")
             return False
         except ConnectionRefusedError:
-            logger.error("Connection refused")
+            logger.error("[CLIENT] Connection refused")
             return False
         except Exception as e:
-            logger.error(f"Connection failed: {str(e)}")
+            logger.error(f"[CLIENT] Connection failed: {str(e)}")
             return False
         finally:
             if not self.connected:
